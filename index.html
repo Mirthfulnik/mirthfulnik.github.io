@@ -78,11 +78,9 @@
 <!-- Telegram WebApp SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-  // === Telegram MiniApp init ===
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // === App state ===
   const answers = [
     "Да, конечно!","Нет, не сейчас.","Возможно…","Лучше не знать.","Без сомнений — да!",
     "Скорее всего.","Маловероятно.","Спроси позже.","Определённо да!","Не думаю."
@@ -95,6 +93,7 @@
   const shareBtn = document.getElementById("shareBtn");
   const openChannelBtn = document.getElementById("openChannel");
   const shakeHint = document.getElementById("shakeHint");
+
   let lastAnswer = "";
   let shakeEnabled = false;
   let lastShakeTime = 0;
@@ -120,12 +119,12 @@
       answerEl.textContent = lastAnswer;
       askBtn.disabled = false;
       shareBtn.disabled = false;
-      questionEl.focus();
+      shareBtn.disabled = false;
       haptic("medium");
     }, 700);
   }
 
-  // === Share (версия как раньше) + упоминание бота ===
+  // Исправленная кнопка «Поделиться»
   async function shareResult(){
     const text =
 `🎱 Волшебный шар ответил:
@@ -134,10 +133,11 @@
 
 @magic_ball_3000_bot`;
 
+    const encodedText = encodeURIComponent(text);
+
     try{
       if (tg && tg.platform) {
-        // Откроет стандартное окно «Поделиться» в Telegram
-        tg.openTelegramLink('https://t.me/share/url?text=' + encodeURIComponent(text));
+        tg.openTelegramLink(`https://t.me/share/url?url=&text=${encodedText}`);
       } else if (navigator.share) {
         await navigator.share({ text });
       } else if (navigator.clipboard && window.isSecureContext){
@@ -145,24 +145,26 @@
         alert("Текст скопирован в буфер обмена.");
       } else {
         const ta = document.createElement("textarea");
-        ta.value = text; document.body.appendChild(ta);
-        ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
         alert("Текст скопирован в буфер обмена.");
       }
-    }catch(_){ /* пользователь мог отменить — ок */ }
+    }catch(err){
+      console.error("Ошибка при отправке:", err);
+    }
   }
 
-  // === Open channel button ===
   function openChannel(){
     const url = "https://t.me/+OJKyROq0MHYxYjBi";
     if (tg) tg.openTelegramLink(url);
     else window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  // === Shake detection ===
   function enableShakeIfPossible(){
     if (shakeEnabled) return;
-
     const needsPerm = typeof DeviceMotionEvent !== "undefined" &&
                       typeof DeviceMotionEvent.requestPermission === "function";
 
@@ -185,8 +187,8 @@
   function onDeviceMotion(e){
     const acc = e.accelerationIncludingGravity || e.acceleration || {x:0,y:0,z:0};
     const a = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2);
-    const THRESHOLD = 18;      // ≈1.8g
-    const COOLDOWN = 1200;     // мс
+    const THRESHOLD = 18;
+    const COOLDOWN = 1200;
 
     const now = Date.now();
     if (a > THRESHOLD && (now - lastShakeTime) > COOLDOWN) {
@@ -195,17 +197,13 @@
     }
   }
 
-  // === Events ===
   askBtn.addEventListener("click", () => { enableShakeIfPossible(); shakeAndAnswer(); });
   ball.addEventListener("click", () => { enableShakeIfPossible(); shakeAndAnswer(); });
   ball.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); enableShakeIfPossible(); shakeAndAnswer(); } });
   questionEl.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ enableShakeIfPossible(); shakeAndAnswer(); } });
   shareBtn.addEventListener("click", shareResult);
   openChannelBtn.addEventListener("click", openChannel);
-
   window.addEventListener("load", ()=> questionEl.focus(), { once:true });
 </script>
 </body>
 </html>
-
-
