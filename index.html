@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Волшебный шар — Mini App</title>
-<meta name="description" content="Задай вопрос и потряси шар — он даст тебе ответ!" />
+<meta name="description" content="Задай вопрос и потряси волшебный шар — он даст тебе ответ!" />
 <style>
   :root{ --bg:#0b0b0f; --bg2:#11131a; --text:#e9f1f6; --muted:#a9b4bf; }
   *{box-sizing:border-box} html,body{height:100%}
@@ -34,7 +34,7 @@
   .btn-secondary{background:#0f1724;color:var(--text);border-color:#213040}
   .channel-info{margin-top:18px}
   .channel-info .title{font-weight:800;font-size:15px}
-  .channel-info .desc{margin-top:4px;color:var(--muted)}
+  .channel-info .desc{margin-top:4px;color:#a9b4bf}
   .channel-info .link{margin-top:8px}
   .channel-info .link button{display:inline-block}
   .hint{margin-top:10px; font-size:12px; color:#9cb2c7}
@@ -54,7 +54,7 @@
   <p class="sub">Задай вопрос, потряси шар — и получи предсказание.</p>
 
   <section class="panel" aria-label="Игровая зона">
-    <div class="ball" id="ball" tabindex="0" role="button" aria-label="Потрясти шар (Enter/Пробел)">
+    <div class="ball" id="ball" tabindex="0" role="button" aria-label="Потряси шар (Enter/Пробел)">
       <div class="answer" id="answer">Спроси что-нибудь…</div>
     </div>
 
@@ -80,14 +80,9 @@
 <script>
   // === Telegram MiniApp init ===
   const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
+  if (tg) { tg.ready(); tg.expand(); }
 
   // === App state ===
-  const SHARE_LINK = "https://t.me/magic_ball_3000_bot/httpsmirthfulnikgithubio";
-
   const answers = [
     "Да, конечно!","Нет, не сейчас.","Возможно…","Лучше не знать.","Без сомнений — да!",
     "Скорее всего.","Маловероятно.","Спроси позже.","Определённо да!","Не думаю."
@@ -130,16 +125,19 @@
     }, 700);
   }
 
-  // === Share with MiniApp link ===
+  // === Share (версия как раньше) + упоминание бота ===
   async function shareResult(){
-    const text = `🎱 Волшебный шар ответил:
+    const text =
+`🎱 Волшебный шар ответил:
 Вопрос: ${questionEl.value}
 Ответ: ${lastAnswer}
 
-Открой MiniApp: ${SHARE_LINK}`;
+@magic_ball_3000_bot`;
+
     try{
       if (tg && tg.platform) {
-        tg.openTelegramLink(`https://t.me/share/url?text=${encodeURIComponent(text)}`);
+        // Откроет стандартное окно «Поделиться» в Telegram
+        tg.openTelegramLink('https://t.me/share/url?text=' + encodeURIComponent(text));
       } else if (navigator.share) {
         await navigator.share({ text });
       } else if (navigator.clipboard && window.isSecureContext){
@@ -151,7 +149,7 @@
         ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
         alert("Текст скопирован в буфер обмена.");
       }
-    }catch(_){}
+    }catch(_){ /* пользователь мог отменить — ок */ }
   }
 
   // === Open channel button ===
@@ -165,7 +163,6 @@
   function enableShakeIfPossible(){
     if (shakeEnabled) return;
 
-    // iOS 13+ requires permission prompt, только по пользовательскому жесту
     const needsPerm = typeof DeviceMotionEvent !== "undefined" &&
                       typeof DeviceMotionEvent.requestPermission === "function";
 
@@ -177,10 +174,9 @@
     };
 
     if (needsPerm) {
-      // запросим разрешение на первом клике/нажатии
       DeviceMotionEvent.requestPermission()
         .then(state => { if (state === "granted") attachListener(); })
-        .catch(()=>{}); // пользователь мог отклонить — ок
+        .catch(()=>{});
     } else if ('ondevicemotion' in window){
       attachListener();
     }
@@ -189,12 +185,10 @@
   function onDeviceMotion(e){
     const acc = e.accelerationIncludingGravity || e.acceleration || {x:0,y:0,z:0};
     const a = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2);
+    const THRESHOLD = 18;      // ≈1.8g
+    const COOLDOWN = 1200;     // мс
 
-    // Порог чувствительности: ~18 м/с² (≈1.8g). Можно подстроить.
-    const THRESHOLD = 18;
     const now = Date.now();
-    const COOLDOWN = 1200; // мс между срабатываниями
-
     if (a > THRESHOLD && (now - lastShakeTime) > COOLDOWN) {
       lastShakeTime = now;
       shakeAndAnswer();
