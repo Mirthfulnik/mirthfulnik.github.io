@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Волшебный шар — спроси и получи ответ</title>
+<meta name="description" content="Задай вопрос и потряси волшебный шар — он даст тебе ответ!" />
+<style>
+  :root{
+    --bg:#0b0b0f; --bg2:#11131a; --glow:#11f7ff; --glow-soft:#59f1ff;
+    --text:#e9f1f6; --muted:#a9b4bf; --accent:#00e6ff; --card:#171a22; --link:#7ce8ff;
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 50% -100px, #15203233, transparent 60%),
+      radial-gradient(600px 600px at 0% 100%, #0e1c2333, transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .app{width:100%; max-width:560px; text-align:center}
+  h1{margin:4px 0 14px; font-weight:700; font-size:clamp(22px,3.2vw,28px)}
+  p.sub{margin:0 0 18px; color:var(--muted); font-size:14px}
+
+  .panel{
+    background: linear-gradient(180deg, #0f1420, #0b0f16);
+    border:1px solid #1f2a38; border-radius:18px; padding:18px;
+    box-shadow: 0 0 0 1px #0e1522 inset, 0 20px 60px #0008, 0 0 40px #00f5ff0f;
+  }
+
+  /* Ball */
+  .ball{
+    width:min(64vw, 260px); height:min(64vw, 260px);
+    border-radius:50%;
+    position:relative;
+    background:
+      radial-gradient(40% 40% at 35% 30%, #2b3e52, #0e1622 60%, #05070c 90%),
+      radial-gradient(80% 80% at 50% 55%, #0a0f18, #000 75%);
+    box-shadow: 0 0 0 2px #0f2430 inset, 0 0 22px 2px #0af6ff22, 0 0 80px #00f7ff14;
+    display:grid; place-items:center; padding:22px; cursor:pointer;
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    margin:0 auto;
+    user-select:none; outline:none;
+  }
+  .ball:before{
+    content:""; position:absolute; inset:12px; border-radius:50%;
+    background: radial-gradient(60% 40% at 30% 25%, #ffffff25, transparent 60%);
+    pointer-events:none;
+  }
+  .ball:hover{filter:brightness(1.05)}
+  .ball:active{transform:scale(.98)}
+  .answer{
+    font-weight:700; font-size:clamp(14px, 3.6vw, 18px); line-height:1.2; color:#b9fbff;
+    text-shadow: 0 0 6px #0ff8, 0 0 14px #00f2ff55; text-align:center; opacity:.92;
+    transform:translateY(4px); max-width:80%; word-break:break-word;
+  }
+
+  /* Controls */
+  .controls{margin-top:14px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+  input{
+    padding:12px 14px; border-radius:12px; border:1px solid #233243;
+    background:#0f1521; color:var(--text); font-size:16px; max-width:340px; flex:1 1 240px; outline:none;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  input:focus{border-color:#2dd6ff; box-shadow:0 0 0 3px #15e1ff22}
+
+  button{
+    padding:12px 16px; border-radius:12px; border:1px solid transparent;
+   .font-weight:700; cursor:pointer; font-size:16px;
+    transition:transform .1s ease, filter .2s ease, box-shadow .2s ease;
+  }
+  .btn-main{
+    background:linear-gradient(180deg, #0ef, #09c); color:#001218; border-color:#163b44;
+    box-shadow:0 8px 24px #00eaff44, inset 0 0 0 1px #ffffff22;
+  }
+  .btn-secondary{
+    background:#0f1724; color:var(--text); border-color:#213040;
+  }
+  button:hover{filter:brightness(1.05)}
+  button:active{transform:translateY(1px)}
+  button[disabled]{opacity:.6; cursor:not-allowed}
+
+  /* Channel info */
+  .channel-info{margin-top:18px}
+  .channel-info .title{font-weight:800; font-size:15px}
+  .channel-info .desc{margin-top:4px; color:var(--muted)}
+  .channel-info .link{margin-top:8px}
+  .channel-info .link a{
+    display:inline-block; padding:10px 16px; background:linear-gradient(180deg, #0ef, #09c);
+    color:#001218; border-radius:10px; text-decoration:none; font-weight:700;
+    border:1px solid #163b44; box-shadow:0 8px 24px #00eaff33, inset 0 0 0 1px #ffffff22;
+  }
+  .channel-info .link a:hover{filter:brightness(1.05)}
+
+  /* Animations */
+  .shake{
+    animation: shake .7s cubic-bezier(.36,.07,.19,.97) both,
+               glow .7s ease-out both;
+  }
+  @keyframes shake{
+    10%{transform:translateX(-3px) rotate(-1deg)}
+    20%{transform:translateX(4px) rotate(1deg)}
+    30%{transform:translateX(-6px) rotate(-2deg)}
+    40%{transform:translateX(6px) rotate(2deg)}
+    50%{transform:translateX(-4px) rotate(-1.6deg)}
+    60%{transform:translateX(4px) rotate(1.6deg)}
+    70%{transform:translateX(-3px) rotate(-1deg)}
+    80%{transform:translateX(3px) rotate(1deg)}
+    90%{transform:translateX(-2px) rotate(-.6deg)}
+    100%{transform:translateX(0) rotate(0)}
+  }
+  @keyframes glow{
+    0%{ box-shadow: 0 0 0 2px #0f2430 inset, 0 0 22px 2px #0af6ff22, 0 0 80px #00f7ff14; }
+    40%{ box-shadow: 0 0 28px 4px #44fbff55, 0 0 110px #06f7ff2a; }
+    100%{ box-shadow: 0 0 22px 2px #0af6ff22, 0 0 80px #00f7ff14; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .shake{animation:none}
+    .ball,button,input{transition:none}
+  }
+</style>
+</head>
+<body>
+<main class="app" role="main">
+  <h1>🎱 Волшебный шар</h1>
+  <p class="sub">Задай вопрос, потряси шар — и получи предсказание.</p>
+
+  <section class="panel" aria-label="Игровая зона">
+    <div class="ball" id="ball" tabindex="0" role="button" aria-label="Потрясти шар (Enter/Пробел)">
+      <div class="answer" id="answer">Спроси что-нибудь…</div>
+    </div>
+
+    <div class="controls" aria-label="Управление">
+      <input id="question" type="text" placeholder="Например: Мне повезёт сегодня?" inputmode="text" />
+      <button id="askBtn" type="button" class="btn-main">Спросить</button>
+      <button id="shareBtn" type="button" class="btn-secondary" disabled>Поделиться</button>
+    </div>
+
+    <!-- Блок канала с кнопкой-ссылкой -->
+    <div class="channel-info" aria-label="Информация о канале">
+      <div class="title">ТГ-канал «Уже летим: о маркетинге и продвижении»</div>
+      <div class="desc">Кейсы, инструменты, инсайты — присоединяйся</div>
+      <div class="link">
+        <a href="https://t.me/uzhe_letim" target="_blank" rel="noopener noreferrer">Посмотреть</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const answers = [
+    "Да, конечно!","Нет, не сейчас.","Возможно…","Лучше не знать.","Без сомнений — да!",
+    "Скорее всего.","Маловероятно.","Спроси позже.","Определённо да!","Не думаю."
+  ];
+
+  const ball = document.getElementById("ball");
+  const answerEl = document.getElementById("answer");
+  const questionEl = document.getElementById("question");
+  const askBtn = document.getElementById("askBtn");
+  const shareBtn = document.getElementById("shareBtn");
+  let lastAnswer = "";
+
+  function vibrate(ms=60){ if(navigator.vibrate){ try{ navigator.vibrate(ms);}catch(e){} } }
+  const pickAnswer = () => answers[Math.floor(Math.random()*answers.length)];
+
+  function shakeAndAnswer(){
+    const q = questionEl.value.trim();
+    if(!q){
+      answerEl.textContent = "Сначала задай вопрос!";
+      questionEl.focus();
+      return;
+    }
+    askBtn.disabled = true;
+    ball.classList.remove("shake"); void ball.offsetWidth; // перезапуск анимации
+    ball.classList.add("shake");
+    vibrate(50);
+
+    setTimeout(()=>{
+      lastAnswer = pickAnswer();
+      answerEl.textContent = lastAnswer;
+      askBtn.disabled = false;
+      shareBtn.disabled = false;
+      questionEl.focus();
+    }, 700);
+  }
+
+  async function shareResult(){
+    const text = `🎱 Волшебный шар ответил:\nВопрос: ${questionEl.value}\nОтвет: ${lastAnswer}`;
+    try{
+      if(navigator.share){
+        await navigator.share({ text });
+      }else if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        alert("Текст скопирован в буфер обмена.");
+      }else{
+        const ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+        alert("Текст скопирован в буфер обмена.");
+      }
+    }catch(_){ /* пользователь мог отменить — это нормально */ }
+  }
+
+  askBtn.addEventListener("click", shakeAndAnswer);
+  ball.addEventListener("click", shakeAndAnswer);
+  ball.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); shakeAndAnswer(); } });
+  questionEl.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ shakeAndAnswer(); } });
+  shareBtn.addEventListener("click", shareResult);
+
+  window.addEventListener("load", ()=> questionEl.focus(), { once:true });
+</script>
+</body>
+</html>
